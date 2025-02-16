@@ -6,26 +6,46 @@
 /*   By: vhambard <vhambard@student.42.fr>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/02/08 16:59:08 by armtoros          #+#    #+#             */
-/*   Updated: 2025/02/16 14:25:58 by vhambard         ###   ########.fr       */
+/*   Updated: 2025/02/16 15:58:13 by vhambard         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
 #include "get_next_line.h"
 #include <stdio.h>
 
-static size_t	ft_strlen(const char *s)
+static char	*create_buff(int fd, ssize_t *tmp)
 {
-	size_t	l;
+	char	*buff;
 
-	l = 0;
-	while (s[l] != '\0')
-		l++;
-	return (l);
+	buff = (char *)malloc(31);
+	if (!buff)
+		return (NULL);
+	buff[30] = '\0';
+	*tmp = read(fd, buff, 30);
+	return (buff);
 }
-static char		*create_buff(int fd, ssize_t *temp)
+
+static void	merging(char *res, char *buff)
 {
-	
+	res = ft_strjoin(res, buff);
+	free(buff);
+	buff = NULL;
 }
+
+static void	merging_in_else(char *buff, char *res, char *dest)
+{
+	char	*ult_temp;
+
+	*dest = '\0';
+	res = ft_strjoin(res, buff);
+	if (dest + 1)
+	{
+		ult_temp = ft_strdup(dest + 1);
+		free(buff);
+		buff = ult_temp;
+	}
+}
+
 char	*get_next_line(int fd)
 {
 	char				*res;
@@ -33,66 +53,35 @@ char	*get_next_line(int fd)
 	char				*dest;
 	static ssize_t		tmp;
 	int					flag;
-	int					currl;
-	char				*ult_temp;
 
 	res = "";
 	flag = 0;
-	currl = 0;
 	while (!flag)
 	{
 		if (!buff)
-		{
-			buff = (char *)malloc(31);
-			if (!buff)
-				return (NULL);
-			buff[30] = '\0';
-			tmp = read(fd, buff, 30);
-		}
+			create_buff(fd, &tmp);
 		if (tmp == 30)
 		{
-			dest = ft_strchr(buff, '\n');	
+			dest = ft_strchr(buff, '\n');
 			if (!dest)
-			{
-				res = ft_strjoin(res, buff);
-				free(buff);
-				buff = NULL;
-			}
+				merging(res, buff);
 			else
 			{
 				flag = 1;
-				*dest = '\0';
-				res = ft_strjoin(res, buff);
-				if (dest + 1)
-				{
-					ult_temp = ft_strdup(dest + 1);
-					free(buff);
-					buff = ult_temp;
-				}	
+				merging_in_else(buff, res, dest);
 			}
 		}
+		else if (tmp == 0)
+			return (NULL);
 		else
-		{	
+		{
 			buff[tmp] = '\0';
 			dest = ft_strchr(buff, '\n');
 			if (!dest)
-			{
-				res = ft_strjoin(res, buff);
-				free(buff);
-				buff = NULL;
-			}
+				merging(res, buff);
 			else
-			{
-				*dest = '\0';
-				res = ft_strjoin(res, buff);
-				if (dest + 1)
-				{
-					ult_temp = ft_strdup(dest + 1);	
-					free(buff);
-					buff = ult_temp;
-				}	
-			}
-				flag = 1;
+				merging_in_else(buff, res, dest);
+			flag = 1;
 		}
 	}
 	return (ft_strdup(res));
@@ -102,7 +91,7 @@ int main()
 {
 	int i =0;
 	int fd = open("text.txt", O_RDONLY);
-	while (i++ < 10)
+	while (i++ < 11)
 	{
 		char *p = get_next_line(fd);
 		write(1, p, ft_strlen(p));
